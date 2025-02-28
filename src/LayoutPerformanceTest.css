@@ -1,0 +1,50 @@
+.container {
+  width: 800px;
+  margin: 20px;
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: 200px 200px 200px;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+.table-layout {
+  width: 100%;
+  border-collapse: collapse;
+
+  /* --column-0-width: 200px;
+  --column-1-width: 200px;
+  --column-2-width: 200px; */
+}
+
+.cell {
+  padding: 8px;
+  border: 1px solid #ccc;
+}
+
+.controls {
+  margin-bottom: 20px;
+}
+
+.results {
+  margin-bottom: 20px;
+}
+
+.flex-layout {
+  display: flex;
+  flex-direction: column;
+
+  --column-0-width: 200px;
+  --column-1-width: 200px;
+  --column-2-width: 200px;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
