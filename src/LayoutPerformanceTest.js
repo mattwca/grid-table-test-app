@@ -1,12 +1,14 @@
 /** eslint-disable */
 
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import './LayoutPerformanceTest.css';
 
 const LayoutPerformanceTest = () => {
+  const subgridRef = useRef(null);
   const gridRef = useRef(null);
   const tableRef = useRef(null);
   const flexRef = useRef(null);
+
   const [results, setResults] = useState([]);
 
   const [testType, setTestType] = useState(null);
@@ -23,24 +25,156 @@ const LayoutPerformanceTest = () => {
     }));
   };
 
-  const rows = generateRows(10000);
+  const rows = useMemo(() => generateRows(10000), []);
+
+  // Grid Layout Component
+  const applyGridLayoutResize = (element, size) => {
+    element.style.setProperty('--column-0-width', `${size}px`);
+  };
+
+  const GridLayoutComponent = () => (
+    <div className="grid-layout" ref={gridRef} role="grid">
+      <div className="grid-row" key="header" role="row">
+        <div className="cell" key="column-1-header" role="columnheader">
+          Column 1
+        </div>
+        <div className="cell" key="column-2-header" role="columnheader">
+          Column 2
+        </div>
+        <div className="cell" key="column-3-header" role="columnheader">
+          Column 3
+        </div>
+      </div>
+      {rows.map((row) => (
+        <div className="grid-row" key={row.id} role="row">
+          {row.cells.map((cell) => (
+            <div className="cell" key={cell.id} role="cell">
+              {cell.content}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Subgrid Layout Component
+  const applySubgridLayoutResize = (element, size) => {
+    element.style.gridTemplateColumns = `${size}px 1fr 1fr`;
+  };
+
+  const SubgridLayoutComponent = () => (
+    <div className="subgrid-layout" ref={subgridRef} role="grid">
+      <div className="subgrid-row" key="header" role="row">
+        <div className="cell" key="column-1-header" role="columnheader">
+          Column 1
+        </div>
+        <div className="cell" key="column-2-header" role="columnheader">
+          Column 2
+        </div>
+        <div className="cell" key="column-3-header" role="columnheader">
+          Column 3
+        </div>
+      </div>
+      {rows.map((row) => (
+        <div className="subgrid-row" key={row.id} role="row">
+          {row.cells.map((cell) => (
+            <div className="cell" key={cell.id} role="cell">
+              {cell.content}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Table Layout Component
+  const applyTableLayoutResize = (element, size) => {
+    // Update width of <col> component within the <colgroup>
+    element.children[0].children[0].style.width = `${size}px`;
+  };
+
+  const TableLayoutComponent = () => (
+    <table
+      className="table-layout"
+      style={{ tableLayout: 'fixed' }}
+      ref={tableRef}
+    >
+      <colgroup>
+        <col style={{ width: '200px' }} />
+        <col style={{ width: '200px' }} />
+        <col style={{ width: 'auto' }} />
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Column 1</th>
+          <th>Column 2</th>
+          <th>Column 3</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.id}>
+            {row.cells.map((cell) => (
+              <td className="cell" key={cell.id}>
+                {cell.content}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
+  // Flex layout
+  const applyFlexLayoutResize = (element, size) => {
+    element.style.setProperty('--column-0-width', `${size}px`);
+  };
+
+  const FlexLayoutComponeent = () => (
+    <div className="flex-layout" ref={flexRef}>
+      {rows.map((row) => (
+        <div className="flex-row" key={row.id}>
+          {row.cells.map((cell, index) => (
+            <div
+              className="cell"
+              style={{ width: `var(--column-${index}-width)` }}
+              key={cell.id}
+            >
+              {cell.content}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+
+  const tests = {
+    grid: {
+      element: () => gridRef.current,
+      applyResize: applyGridLayoutResize,
+    },
+    subgrid: {
+      element: () => subgridRef.current,
+      applyResize: applyGridLayoutResize,
+    },
+    table: {
+      element: () => tableRef.current,
+      applyResize: applyTableLayoutResize,
+    },
+    flex: {
+      element: () => flexRef.current,
+      applyResize: applyFlexLayoutResize,
+    },
+  };
 
   // Performance test function
   const testResize = async (iterations, type) => {
     setTestType(type);
     setTesting(true);
 
-    console.log(testing);
-    console.log(testType);
-
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const element =
-      type === 'grid'
-        ? gridRef.current
-        : type === 'flex'
-        ? flexRef.current
-        : tableRef.current;
+    const element = tests[type].element();
 
     const results = [];
     const sizes = [150, 200, 250, 300];
@@ -49,27 +183,7 @@ const LayoutPerformanceTest = () => {
       const start = performance.now();
 
       // Simulate column resizing
-      if (type === 'grid') {
-        const value = sizes[i % sizes.length];
-        element.style.gridTemplateColumns = `${value}px 200px 200px`;
-      }
-
-      if (type === 'table') {
-        // element.style.setProperty(
-        //   '--column-0-width',
-        //   `${sizes[i % sizes.length]}px`
-        // );
-        // For each header in the table, change the width
-        const headers = element.querySelectorAll('th');
-        headers[0].style.width = `${sizes[i % sizes.length]}px`;
-      }
-
-      if (type === 'flex') {
-        element.style.setProperty(
-          '--column-0-width',
-          `${sizes[i % sizes.length]}px`
-        );
-      }
+      tests[type].applyResize(element, sizes[i % sizes.length]);
 
       // Force layout recalculation
       // eslint-disable-next-line no-unused-expressions
@@ -97,68 +211,14 @@ const LayoutPerformanceTest = () => {
     ]);
   };
 
-  // Grid Layout Component
-  const GridLayoutComponent = () => (
-    <div className="grid-layout" ref={gridRef} role="grid">
-      {rows.map((row) => (
-        <div className="grid-row" key={row.id} role="row">
-          {row.cells.map((cell) => (
-            <div className="cell" key={cell.id} role="cell">
-              {cell.content}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-
-  // Table Layout Component
-  const TableLayoutComponent = () => (
-    <table className="table-layout" ref={tableRef}>
-      <thead>
-        <tr>
-          <th>Column 1</th>
-          <th>Column 2</th>
-          <th>Column 3</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => (
-          <tr key={row.id}>
-            {row.cells.map((cell) => (
-              <td className="cell" key={cell.id}>
-                {cell.content}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-
-  const FlexLayoutComponeent = () => (
-    <div className="flex-layout" ref={flexRef}>
-      {rows.map((row) => (
-        <div className="flex-row" key={row.id}>
-          {row.cells.map((cell, index) => (
-            <div
-              className="cell"
-              style={{ width: `var(--column-${index}-width)` }}
-              key={cell.id}
-            >
-              {cell.content}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-
   return (
     <div>
       <div className="controls">
         <button onClick={() => testResize(50, 'grid')}>
           Test Grid Resizing
+        </button>
+        <button onClick={() => testResize(50, 'subgrid')}>
+          Test Sub Grid Resizing
         </button>
         <button onClick={() => testResize(50, 'table')}>
           Test Table Resizing
@@ -189,8 +249,9 @@ const LayoutPerformanceTest = () => {
             background: 'white',
           }}
         >
-          {testType === 'table' && <TableLayoutComponent />}
           {testType === 'grid' && <GridLayoutComponent />}
+          {testType === 'subgrid' && <SubgridLayoutComponent />}
+          {testType === 'table' && <TableLayoutComponent />}
           {testType === 'flex' && <FlexLayoutComponeent />}
         </div>
       )}
